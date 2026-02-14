@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobepiece API - 画像と文章の処理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="file"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        input[type="file"]:hover {
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .preview {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #666;
+            display: none;
+        }
+
+        .preview.show {
+            display: block;
+        }
+
+        .preview img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            background: #f0f7ff;
+            border: 2px solid #e3f2fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        #responseText {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #555;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        #responseImage {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            display: none;
+            margin-top: 15px;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+            border: 1px solid #ef5350;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Lobepiece API</h1>
+
+        <div class="form-group">
+            <label for="imageInput">画像を選択</label>
+            <input type="file" id="imageInput" accept="image/*">
+            <div class="preview" id="preview"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="textInput">テキストを入力</label>
+            <textarea id="textInput" placeholder="処理したい文章を入力してください..."></textarea>
+        </div>
+
+        <button id="sendButton" onclick="handleUpload()">送信</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>処理中...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="result-title">🤖 Gemini レスポンス</div>
+            <div id="responseText"></div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // 画像プレビュー表示
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('preview');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    preview.innerHTML = `<strong>選択画像</strong><img src="${event.target.result}" style="max-width: 100%; margin-top: 8px;">`;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.classList.remove('show');
+            }
+        });
+
+        // メインの送信処理
+        async function handleUpload() {
+            const imageInput = document.getElementById('imageInput');
+            const textInput = document.getElementById('textInput');
+            const sendButton = document.getElementById('sendButton');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+
+            // 入力値のバリデーション
+            if (!imageInput.files[0]) {
+                showError('画像を選択してください');
+                return;
+            }
+
+            if (!textInput.value.trim()) {
+                showError('テキストを入力してください');
+                return;
+            }
+
+            // UI状態の更新
+            sendButton.disabled = true;
+            loading.classList.add('show');
+            error.classList.remove('show');
+            resultsDiv.classList.remove('show');
+
+            try {
+                // Gemini API呼び出し
+                const result = await sendImageAndTextToGemini(
+                    imageInput.files[0],
+                    textInput.value
+                );
+
+                // 結果を表示
+                displayResult(result);
+                resultsDiv.classList.add('show');
+
+            } catch (err) {
+                showError(`エラー: ${err.message}`);
+            } finally {
+                sendButton.disabled = false;
+                loading.classList.remove('show');
+            }
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.classList.add('show');
+        }
+    </script>
+</body>
+</html>
